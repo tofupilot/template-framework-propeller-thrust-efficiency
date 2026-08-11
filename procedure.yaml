@@ -1,0 +1,124 @@
+name: Propeller Thrust and Efficiency Curve
+version: 0.1.0
+description: Measures propeller thrust, torque, and efficiency across the throttle range at end-of-line, with figure of merit and hover-point validation.
+
+unit:
+  auto_identify: true
+  serial_number:
+    default_value: "SN00001"
+  part_number:
+    default_value: "PROP-9450"
+
+plugs:
+  - name: Flight Stand
+    description: Simulated Tyto-class thrust stand with electrical metrology.
+    python: plugs.bench:MockFlightStand
+    key: bench
+    config:
+      address: "192.168.1.60"
+      sample_rate_hz: 80
+  - name: Stator Probe
+    key: temp_stator
+    python: plugs.temp_probe:TempProbe
+    config:
+      channel: 0
+  - name: ESC Probe
+    key: temp_esc
+    python: plugs.temp_probe:TempProbe
+    config:
+      channel: 1
+
+setup:
+  - name: Zero Bench
+    key: zero_bench
+    python: setup.zero_bench
+    measurements:
+      - name: Thrust Zero Offset
+        key: thrust_zero_g
+        unit: g
+        validators:
+          - operator: "<="
+            expected_value: 2.0
+      - name: Torque Zero Offset
+        key: torque_zero_mnm
+        unit: mN·m
+        validators:
+          - operator: "<="
+            expected_value: 5.0
+
+main:
+  - name: Throttle Sweep
+    key: throttle_sweep
+    python: phases.throttle_sweep
+    measurements:
+      - name: Thrust Curve
+        key: thrust_curve
+        title: Thrust vs Throttle
+        x_axis:
+          legend: Throttle
+          unit: "%"
+        y_axis:
+          - legend: Thrust
+            key: thrust
+            unit: g
+      - name: Stator Temperature
+        key: stator_temp_c
+        unit: "°C"
+        aggregations:
+          - type: min
+            validators:
+              - operator: ">="
+                expected_value: 15.0
+          - type: max
+            validators:
+              - operator: "<="
+                expected_value: 85.0
+          - type: mean
+            validators:
+              - operator: "<="
+                expected_value: 60.0
+          - type: p2p
+            validators:
+              - operator: "<="
+                expected_value: 60.0
+
+  - name: Compute Efficiency
+    key: compute_efficiency
+    python: phases.compute_efficiency
+    depends_on:
+      - throttle_sweep
+    measurements:
+      - name: Efficiency Curve
+        key: efficiency_curve
+        title: System Efficiency vs Throttle
+        x_axis:
+          legend: Throttle
+          unit: "%"
+        y_axis:
+          - legend: Efficiency
+            key: efficiency
+            unit: g/W
+      - name: Hover Efficiency
+        key: hover_efficiency_gw
+        unit: g/W
+        validators:
+          - operator: ">="
+            expected_value: 8.0
+      - name: Peak Thrust
+        key: peak_thrust_g
+        unit: g
+        validators:
+          - operator: ">="
+            expected_value: 1748
+          - operator: "<="
+            expected_value: 1932
+      - name: Figure of Merit
+        key: figure_of_merit
+        validators:
+          - operator: ">="
+            expected_value: 0.55
+
+teardown:
+  - name: Power Down
+    key: power_down
+    python: teardown.power_down
