@@ -1,5 +1,7 @@
 # Framework Propeller Thrust and Efficiency Curve
 
+![Cover](cover.png)
+
 A TofuPilot Framework procedure that measures a drone propulsion system (motor + propeller + ESC) at end-of-line. Zeroes the bench in a setup stage, sweeps throttle while logging thrust, torque, RPM, and electrical power, computes the efficiency curve, hover-point efficiency, peak thrust, and figure of merit, and always powers the bench down in a teardown stage.
 
 ## What This Shows
